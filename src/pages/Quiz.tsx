@@ -4,6 +4,7 @@ import { Header } from '../components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationsContext';
 import { getClusterById, getRecommendationForCluster, inferClusterId } from '../data/engine';
 import type { Member } from '../data/mockData';
 import { saveQuizSubmission, getLatestQuizSubmission, updateProfileFullName } from '../lib/quizDb';
@@ -11,6 +12,7 @@ import { saveQuizSubmission, getLatestQuizSubmission, updateProfileFullName } fr
 export function Quiz() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { addNotification } = useNotifications();
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [name, setName] = useState('');
@@ -101,6 +103,15 @@ export function Quiz() {
     setResultClusterName(archetypeName);
     setResultEventTitle(recommendation?.title ?? null);
     setResultEventWhy(recommendation?.why_this_fits ?? null);
+
+    // Add notification
+    addNotification({
+      type: 'quiz',
+      title: 'Quiz Completed!',
+      message: `You've been assigned to ${archetypeName}. Check your personalized recommendations!`,
+      icon: '🎯',
+      color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    });
     setSubmitted(true);
   };
 
