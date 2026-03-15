@@ -13,24 +13,19 @@ export type QuizAnswers = {
 
 export async function saveQuizSubmission(
   userId: string,
+  userEmail: string,
   answers: QuizAnswers,
   archetype: string,
   scores: BigFiveScores,
   communityRole: CommunityRole
 ): Promise<{ error: Error | null }> {
-  const row: QuizSubmissionInsert = {
-    user_id: userId,
-    answers: answers as unknown as QuizSubmissionInsert['answers'],
-    archetype,
-  };
-
-  const { error: quizError } = await supabase.from('quiz_submissions').insert(row);
-  if (quizError) return { error: quizError };
-
-  // Also update the profile with Big Five scores and role
+  // GUARANTEE the profile exists before inserting the quiz (fixes FK constraint if trigger failed)
   const { error: profileError } = await supabase
     .from('profiles')
-    .update({
+    .upsert({
+      id: userId,
+      email: userEmail || '',
+      full_name: answers.name || '',
       extraversion: scores.extraversion,
       agreeableness: scores.agreeableness,
       conscientiousness: scores.conscientiousness,
@@ -40,12 +35,20 @@ export async function saveQuizSubmission(
       interests: answers.interests,
       consent_profile: true,
       consent_date: new Date().toISOString(),
-    })
-    .eq('id', userId);
+    } as any);
 
   if (profileError) {
-    console.warn('Failed to update profile with Big Five scores:', profileError.message);
+    console.warn('Failed to upsert profile:', profileError.message);
   }
+
+  const row: QuizSubmissionInsert = {
+    user_id: userId,
+    answers: answers as unknown as QuizSubmissionInsert['answers'],
+    archetype,
+  };
+
+  const { error: quizError } = await supabase.from('quiz_submissions').insert(row as any);
+  if (quizError) return { error: quizError };
 
   return { error: null };
 }
@@ -62,13 +65,7 @@ export async function getLatestQuizSubmission(userId: string) {
   return { data, error: null };
 }
 
-export async function updateProfileFullName(userId: string, fullName: string) {
-  const { error } = await supabase
-    .from('profiles')
-    .update({ full_name: fullName })
-    .eq('id', userId);
-  return { error: error ?? null };
-}
+// Removed updateProfileFullName as it's now handled by the upsert above
 
 export async function getProfile(userId: string) {
   const { data, error } = await supabase

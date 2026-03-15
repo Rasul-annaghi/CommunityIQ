@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Card, CardContent } from '../components/Card';
 import { getClusterSummaries, getRecommendations, getTopVenues, getAllMembers } from '../data/engine';
 import { ArrowRight, Users, Activity, Target, MapPin } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -11,7 +12,16 @@ export function Dashboard() {
   const topRecommendations = getRecommendations().slice(0, 2);
   const venues = getTopVenues();
   const members = getAllMembers();
-  const totalMembers = members.length;
+  const [totalMembers, setTotalMembers] = useState(members.length);
+
+  useEffect(() => {
+    supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .then(({ count }) => {
+        if (count != null && count > 0) setTotalMembers(count);
+      });
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50/50">

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { getCommunityAverages, getRecommendations, getAllMembers } from '../data/engine';
@@ -11,6 +12,7 @@ import {
   Lightbulb, ClipboardList, ChevronRight, Shield,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 const GEMINI_API_KEY = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || '';
 
@@ -42,8 +44,11 @@ const ROLE_COLORS: Record<string, string> = {
 
 export function PlannerDashboard() {
   const { user } = useAuth();
-  const community = useMemo(() => getCommunityAverages(), []);
+  const navigate = useNavigate();
+  const defaultCommunity = useMemo(() => getCommunityAverages(), []);
   const recommendations = useMemo(() => getRecommendations(), []);
+
+  const [dynamicCommunity, setDynamicCommunity] = useState(defaultCommunity);
 
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [aiIdeas, setAiIdeas] = useState<string | null>(null);
@@ -54,6 +59,75 @@ export function PlannerDashboard() {
   const [loadingAgenda, setLoadingAgenda] = useState(false);
   const [loadingInvite, setLoadingInvite] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<string>(recommendations[0]?.title ?? '');
+  const [liveMemberCount, setLiveMemberCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from('profiles')
+      .select('id, extraversion, agreeableness, conscientiousness, openness, emotional_stability, community_role, interests', { count: 'exact' })
+      .then(({ data, count }: { data: any[] | null; count: number | null }) => {
+        if (count != null && count > 0) setLiveMemberCount(count);
+        
+        const allMembers = getAllMembers();
+        let e = 0, a = 0, c = 0, o = 0, s = 0;
+        const roles = new Map<string, number>();
+        const interestsMap = new Map<string, number>();
+
+        // 1. Seed with mock baseline members (5 default members)
+        allMembers.slice(0, 5).forEach(m => {
+          e += m.extraversion || 0.5;
+          a += m.agreeableness || 0.5;
+          c += m.conscientiousness || 0.5;
+          o += m.openness || 0.5;
+          s += m.emotionalStability || 0.5;
+
+          const role = m.communityRole || 'Participant';
+          roles.set(role, (roles.get(role) || 0) + 1);
+
+          if (Array.isArray(m.interests)) {
+            m.interests.forEach(int => interestsMap.set(int, (interestsMap.get(int) || 0) + 1));
+          }
+        });
+
+        // 2. Add dynamic profiles from Supabase
+        if (data && data.length > 0) {
+          data.forEach(p => {
+            e += p.extraversion || 0.5;
+            a += p.agreeableness || 0.5;
+            c += p.conscientiousness || 0.5;
+            o += p.openness || 0.5;
+            s += p.emotional_stability || 0.5;
+
+            const role = p.community_role || 'Participant';
+            roles.set(role, (roles.get(role) || 0) + 1);
+
+            if (Array.isArray(p.interests)) {
+              p.interests.forEach(int => interestsMap.set(int, (interestsMap.get(int) || 0) + 1));
+            }
+          });
+        }
+
+        const total = 5 + (data ? data.length : 0);
+
+        setDynamicCommunity({
+          totalMembers: total,
+          extraversion: Number((e / total).toFixed(2)),
+          agreeableness: Number((a / total).toFixed(2)),
+          conscientiousness: Number((c / total).toFixed(2)),
+          openness: Number((o / total).toFixed(2)),
+          emotionalStability: Number((s / total).toFixed(2)),
+          roleDistribution: Array.from(roles.entries())
+            .map(([role, rcount]) => ({ role, count: rcount, percent: Math.round((rcount / total) * 100) }))
+            .sort((ax, bx) => bx.count - ax.count),
+          topInterests: Array.from(interestsMap.entries())
+            .map(([name, icount]) => ({ name, count: icount }))
+            .sort((ax, bx) => bx.count - ax.count),
+        });
+      });
+  }, []);
+
+  const community = dynamicCommunity;
+  const displayMemberCount = community.totalMembers;
 
   const radarData = [
     { trait: 'Extraversion', value: community.extraversion },
@@ -154,7 +228,7 @@ Format with clear headings and bullet points.`;
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Total Members</p>
-                <p className="text-2xl font-bold text-gray-900">{community.totalMembers}</p>
+                <p className="text-2xl font-bold text-gray-900">{displayMemberCount}</p>
               </div>
             </CardContent>
           </Card>
@@ -414,7 +488,11 @@ Format with clear headings and bullet points.`;
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {recommendations.map((rec) => (
-              <Card key={rec.id} className="overflow-hidden hover:shadow-md transition-all">
+              <Card 
+                key={rec.id} 
+                className="overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all cursor-pointer"
+                onClick={() => navigate(`/event/${rec.id}`)}
+              >
                 <div className="h-40 relative">
                   <img
                     src={rec.image}

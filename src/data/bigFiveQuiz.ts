@@ -1,4 +1,4 @@
-// Big Five personality quiz: 16 Likert-scale questions + scoring + role mapping
+// Big Five personality quiz: 12 Likert-scale questions + scoring + role mapping
 
 export interface QuizQuestion {
   id: number;
@@ -27,24 +27,20 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
   { id: 1, text: 'I enjoy being the center of attention in group activities.', trait: 'E' },
   { id: 2, text: 'I usually start conversations in new groups.', trait: 'E' },
   { id: 3, text: 'I feel energized after attending events or meetups.', trait: 'E' },
-  // Agreeableness (3 questions)
+  // Agreeableness (2 questions)
   { id: 4, text: 'I enjoy helping other people solve their problems.', trait: 'A' },
   { id: 5, text: 'I prefer collaboration rather than competition.', trait: 'A' },
-  { id: 6, text: 'I try to make everyone feel included in group settings.', trait: 'A' },
-  // Conscientiousness (3 questions)
-  { id: 7, text: 'I usually finish tasks I start, even if they become difficult.', trait: 'C' },
-  { id: 8, text: 'I like organizing projects, events, or team activities.', trait: 'C' },
-  { id: 9, text: 'I plan things ahead instead of acting spontaneously.', trait: 'C' },
-  // Openness (3 questions)
-  { id: 10, text: 'I enjoy exploring new ideas, technologies, or cultures.', trait: 'O' },
-  { id: 11, text: 'I like brainstorming and experimenting with new solutions.', trait: 'O' },
-  { id: 12, text: 'I enjoy learning skills outside my main field.', trait: 'O' },
-  // Emotional Stability (3 questions)
-  { id: 13, text: 'I stay calm when things go wrong in projects.', trait: 'S' },
-  { id: 14, text: 'I handle criticism or feedback well.', trait: 'S' },
-  { id: 15, text: 'I rarely feel overwhelmed during busy schedules.', trait: 'S' },
-  // Community Motivation (1 question – stored separately)
-  { id: 16, text: 'I join communities mainly to learn and meet new people.', trait: 'E' },
+  // Conscientiousness (2 questions)
+  { id: 6, text: 'I like organizing projects, events, or team activities.', trait: 'C' },
+  { id: 7, text: 'I plan things ahead instead of acting spontaneously.', trait: 'C' },
+  // Openness (2 questions)
+  { id: 8, text: 'I enjoy exploring new ideas, technologies, or cultures.', trait: 'O' },
+  { id: 9, text: 'I enjoy learning skills outside my main field.', trait: 'O' },
+  // Emotional Stability (2 questions)
+  { id: 10, text: 'I handle criticism or feedback well.', trait: 'S' },
+  { id: 11, text: 'I rarely feel overwhelmed during busy schedules.', trait: 'S' },
+  // Community Motivation (1 question)
+  { id: 12, text: 'I join communities mainly to learn and meet new people.', trait: 'E' },
 ];
 
 export const LIKERT_LABELS = [
@@ -61,10 +57,10 @@ export const LIKERT_LABELS = [
 export function scoreBigFive(answers: Record<number, number>): BigFiveScores {
   const traitQuestions: Record<string, number[]> = {
     E: [1, 2, 3],
-    A: [4, 5, 6],
-    C: [7, 8, 9],
-    O: [10, 11, 12],
-    S: [13, 14, 15],
+    A: [4, 5],
+    C: [6, 7],
+    O: [8, 9],
+    S: [10, 11],
   };
 
   const compute = (ids: number[]): number => {

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { CheckCircle2, Sparkles, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationsContext';
-import { saveQuizSubmission, getLatestQuizSubmission, updateProfileFullName } from '../lib/quizDb';
+import { saveQuizSubmission, getLatestQuizSubmission } from '../lib/quizDb';
 import {
   QUIZ_QUESTIONS,
   LIKERT_LABELS,
@@ -107,9 +107,14 @@ export function Quiz() {
       preferredTime,
     };
 
-    await updateProfileFullName(user.id, answers.name);
-
-    const { error } = await saveQuizSubmission(user.id, answers, communityRole, scores, communityRole);
+    const { error } = await saveQuizSubmission(
+      user.id,
+      user.email || '',
+      answers,
+      communityRole,
+      scores,
+      communityRole
+    );
     setSaving(false);
 
     if (error) {
