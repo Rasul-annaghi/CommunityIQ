@@ -14,20 +14,25 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
-const GEMINI_API_KEY = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || '';
+const GROQ_API_KEY = (import.meta as any).env.VITE_GROQ_API_KEY || '';
 
-async function callGemini(prompt: string): Promise<string> {
+async function callGroq(prompt: string): Promise<string> {
   try {
-    const { GoogleGenAI } = await import('@google/genai');
-    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
+    const { Groq } = await import('groq-sdk');
+    const groq = new Groq({ 
+      apiKey: GROQ_API_KEY,
+      dangerouslyAllowBrowser: true
     });
-    return response.text ?? 'No response generated.';
+    
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [{ role: 'user', content: prompt }],
+    });
+    
+    return response.choices[0]?.message?.content ?? 'No response generated.';
   } catch (err: any) {
-    if (!GEMINI_API_KEY) {
-      return '⚠️ Gemini API key not configured. Add GEMINI_API_KEY to your .env.local file to enable AI features.';
+    if (!GROQ_API_KEY) {
+      return '⚠️ Groq API key not configured. Add VITE_GROQ_API_KEY to your .env.local file to enable AI features.';
     }
     return `Error: ${err.message || 'Failed to generate AI response.'}`;
   }
@@ -160,7 +165,7 @@ Top interests: ${interestsText}.
 Total members: ${community.totalMembers}.
 Big Five averages: Extraversion=${community.extraversion}, Agreeableness=${community.agreeableness}, Conscientiousness=${community.conscientiousness}, Openness=${community.openness}, Emotional Stability=${community.emotionalStability}.
 Summarize what types of events and activities will engage this community most. Be specific and actionable. Write 2-3 paragraphs.`;
-    const result = await callGemini(prompt);
+    const result = await callGroq(prompt);
     setAiInsight(result);
     setLoadingInsight(false);
   };
@@ -174,7 +179,7 @@ Community profile:
 - Top interests: ${interestsText}
 - Big Five averages: E=${community.extraversion}, A=${community.agreeableness}, C=${community.conscientiousness}, O=${community.openness}, S=${community.emotionalStability}
 Provide for each event: title, short description, target audience (roles), suggested duration, and energy level. Format with numbered list and bold titles.`;
-    const result = await callGemini(prompt);
+    const result = await callGroq(prompt);
     setAiIdeas(result);
     setLoadingIdeas(false);
   };
@@ -189,7 +194,7 @@ Community size: ${community.totalMembers} members. Include:
 4. Promotion ideas (social media, email)
 5. Success metrics to track
 Format with clear headings and bullet points.`;
-    const result = await callGemini(prompt);
+    const result = await callGroq(prompt);
     setAiAgenda(result);
     setLoadingAgenda(false);
   };
@@ -197,7 +202,7 @@ Format with clear headings and bullet points.`;
   const generateInvite = async () => {
     setLoadingInvite(true);
     const prompt = `Write an invitation text to send to potential attendees for the "${selectedEvent}" event. Highlight key benefits, include emojis, and add a clear RSVP call-to-action. Make it engaging and concise (under 150 words). Also include a subject line.`;
-    const result = await callGemini(prompt);
+    const result = await callGroq(prompt);
     setAiInvite(result);
     setLoadingInvite(false);
   };
@@ -381,11 +386,18 @@ Format with clear headings and bullet points.`;
                   {loadingInsight ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                   {loadingInsight ? 'Analyzing...' : 'Generate Insights'}
                 </button>
-                {aiInsight && (
+                {aiInsight === "⚠️ Groq API key not configured. Add VITE_GROQ_API_KEY to your .env.local file to enable AI features." ? (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-lg flex items-start gap-2">
+                    <span className="text-amber-600 text-lg leading-none">⚠️</span>
+                    <p className="text-sm text-amber-700">
+                      ⚠️ Groq API key not configured. Add <code className="bg-amber-100 px-1 rounded">VITE_GROQ_API_KEY</code> to your .env.local file to enable AI features.
+                    </p>
+                  </div>
+                ) : aiInsight ? (
                   <div className="mt-4 rounded-xl bg-gray-50 border border-gray-100 p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                     {aiInsight}
                   </div>
-                )}
+                ) : null}
               </CardContent>
             </Card>
 
@@ -408,11 +420,18 @@ Format with clear headings and bullet points.`;
                   {loadingIdeas ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
                   {loadingIdeas ? 'Generating...' : 'Generate 3 Ideas'}
                 </button>
-                {aiIdeas && (
+                {aiIdeas === "⚠️ Groq API key not configured. Add VITE_GROQ_API_KEY to your .env.local file to enable AI features." ? (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-lg flex items-start gap-2">
+                    <span className="text-amber-600 text-lg leading-none">⚠️</span>
+                    <p className="text-sm text-amber-700">
+                      ⚠️ Groq API key not configured. Add <code className="bg-amber-100 px-1 rounded">VITE_GROQ_API_KEY</code> to your .env.local file to enable AI features.
+                    </p>
+                  </div>
+                ) : aiIdeas ? (
                   <div className="mt-4 rounded-xl bg-gray-50 border border-gray-100 p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                     {aiIdeas}
                   </div>
-                )}
+                ) : null}
               </CardContent>
             </Card>
 
@@ -444,11 +463,18 @@ Format with clear headings and bullet points.`;
                   {loadingAgenda ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardList className="w-4 h-4" />}
                   {loadingAgenda ? 'Planning...' : 'Generate Full Plan'}
                 </button>
-                {aiAgenda && (
+                {aiAgenda === "⚠️ Groq API key not configured. Add VITE_GROQ_API_KEY to your .env.local file to enable AI features." ? (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-lg flex items-start gap-2">
+                    <span className="text-amber-600 text-lg leading-none">⚠️</span>
+                    <p className="text-sm text-amber-700">
+                      ⚠️ Groq API key not configured. Add <code className="bg-amber-100 px-1 rounded">VITE_GROQ_API_KEY</code> to your .env.local file to enable AI features.
+                    </p>
+                  </div>
+                ) : aiAgenda ? (
                   <div className="mt-4 rounded-xl bg-gray-50 border border-gray-100 p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
                     {aiAgenda}
                   </div>
-                )}
+                ) : null}
               </CardContent>
             </Card>
 
@@ -471,11 +497,18 @@ Format with clear headings and bullet points.`;
                   {loadingInvite ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   {loadingInvite ? 'Writing...' : 'Generate Invite'}
                 </button>
-                {aiInvite && (
+                {aiInvite === "⚠️ Groq API key not configured. Add VITE_GROQ_API_KEY to your .env.local file to enable AI features." ? (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-lg flex items-start gap-2">
+                    <span className="text-amber-600 text-lg leading-none">⚠️</span>
+                    <p className="text-sm text-amber-700">
+                      ⚠️ Groq API key not configured. Add <code className="bg-amber-100 px-1 rounded">VITE_GROQ_API_KEY</code> to your .env.local file to enable AI features.
+                    </p>
+                  </div>
+                ) : aiInvite ? (
                   <div className="mt-4 rounded-xl bg-gray-50 border border-gray-100 p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                     {aiInvite}
                   </div>
-                )}
+                ) : null}
               </CardContent>
             </Card>
           </div>

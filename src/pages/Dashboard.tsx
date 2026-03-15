@@ -19,7 +19,7 @@ export function Dashboard() {
       .from('profiles')
       .select('id', { count: 'exact', head: true })
       .then(({ count }) => {
-        if (count != null && count > 0) setTotalMembers(count);
+        setTotalMembers(members.length + (count || 0));
       });
   }, []);
 
