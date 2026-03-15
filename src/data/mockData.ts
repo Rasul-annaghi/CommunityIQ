@@ -91,11 +91,11 @@ function makeMember(
 }
 
 export const mockMembers: Member[] = [
-  makeMember('1', 'Alice', 'Designer', 0.3, 0.7, 0.5, 0.9, 0.6, 'Innovator', ['Design', 'UX Research', 'Art'], 'Workshop', 'Weekend'),
-  makeMember('2', 'Bob', 'Developer', 0.8, 0.5, 0.7, 0.8, 0.5, 'Community Builder', ['AI', 'Startups', 'Coding'], 'Hackathon', 'Evening'),
-  makeMember('3', 'Charlie', 'Data Scientist', 0.2, 0.6, 0.9, 0.7, 0.7, 'Specialist', ['Data Science', 'AI', 'Cloud/DevOps'], 'Study Group', 'Weekend'),
-  makeMember('4', 'Diana', 'Product Manager', 0.9, 0.8, 0.6, 0.5, 0.4, 'Community Builder', ['Leadership', 'Startups', 'Marketing'], 'Mixer', 'Evening'),
-  makeMember('5', 'Eve', 'Illustrator', 0.2, 0.8, 0.4, 0.8, 0.7, 'Supporter', ['Design', 'Community', 'Open Source'], 'Workshop', 'Weekend'),
+  makeMember('1', 'Alice', 'Designer', 0.3, 0.4, 0.3, 0.9, 0.6, 'Innovator', ['Design', 'UX Research', 'Art'], 'Workshop', 'Weekend'),
+  makeMember('2', 'Bob', 'Developer', 0.8, 0.8, 0.5, 0.3, 0.4, 'Community Builder', ['AI', 'Startups', 'Coding'], 'Hackathon', 'Evening'),
+  makeMember('3', 'Charlie', 'Data Scientist', 0.3, 0.5, 0.9, 0.4, 0.7, 'Specialist', ['Data Science', 'AI', 'Cloud/DevOps'], 'Study Group', 'Weekend'),
+  makeMember('4', 'Diana', 'Product Manager', 0.5, 0.6, 0.8, 0.3, 0.4, 'Organizer', ['Leadership', 'Startups', 'Marketing'], 'Mixer', 'Evening'),
+  makeMember('5', 'Eve', 'Illustrator', 0.3, 0.9, 0.4, 0.4, 0.9, 'Supporter', ['Design', 'Community', 'Open Source'], 'Workshop', 'Weekend'),
 ];
 
 export const mockClusters: Cluster[] = [

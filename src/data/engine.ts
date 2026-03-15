@@ -179,10 +179,10 @@ export function inferClusterId(member: Member): string {
   const { extraversion: E, agreeableness: A, conscientiousness: C, openness: O, emotionalStability: S } = member;
 
   if (E > 0.7 && A > 0.7) return 'community-builder';
+  if (A > 0.7 && S > 0.7) return 'supporter';
+  if (E < 0.4 && C > 0.6) return 'specialist'; // Check specialist before general organizer
   if (C > 0.7) return 'organizer';
   if (O > 0.7) return 'innovator';
-  if (A > 0.7 && S > 0.7) return 'supporter';
-  if (E < 0.4 && C > 0.6) return 'specialist';
   return 'innovator'; // default
 }
 

@@ -79,7 +79,7 @@ export function PlannerDashboard() {
         const interestsMap = new Map<string, number>();
 
         // 1. Seed with mock baseline members (5 default members)
-        allMembers.slice(0, 5).forEach(m => {
+        allMembers.forEach(m => {
           e += m.extraversion || 0.5;
           a += m.agreeableness || 0.5;
           c += m.conscientiousness || 0.5;

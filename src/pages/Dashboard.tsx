@@ -11,7 +11,7 @@ export function Dashboard() {
   const clusters = getClusterSummaries();
   const topRecommendations = getRecommendations().slice(0, 2);
   const venues = getTopVenues();
-  const members = getAllMembers().slice(0, 5);
+  const members = getAllMembers();
   const [totalMembers, setTotalMembers] = useState(members.length);
 
   useEffect(() => {
