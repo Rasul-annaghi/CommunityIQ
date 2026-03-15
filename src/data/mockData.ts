@@ -2,12 +2,20 @@ export interface Member {
   id: string;
   name: string;
   role: string;
-  intro_extro_score: number; // 1 (Intro) to 5 (Extro)
-  creative_technical_score: number; // 1 (Creative) to 5 (Technical)
-  collaboration_score: number; // 1 (Independent) to 5 (Collaborative)
+  // Big Five scores (0.0–1.0)
+  extraversion: number;
+  agreeableness: number;
+  conscientiousness: number;
+  openness: number;
+  emotionalStability: number;
+  communityRole: string;
   interests: string[];
   preferred_format: string;
   preferred_time: string;
+  // Legacy compat (derived from Big Five)
+  intro_extro_score: number;
+  creative_technical_score: number;
+  collaboration_score: number;
 }
 
 export interface Cluster {
@@ -18,6 +26,12 @@ export interface Cluster {
   avg_intro_extro: number;
   avg_creative_technical: number;
   avg_collaboration: number;
+  // Big Five averages
+  avg_extraversion: number;
+  avg_agreeableness: number;
+  avg_conscientiousness: number;
+  avg_openness: number;
+  avg_emotionalStability: number;
   dominant_interests: string[];
   recommended_event_type: string;
   recommended_time: string;
@@ -42,6 +56,8 @@ export interface EventRecommendation {
   address: string;
   host: string;
   details: string[];
+  personality_profile: number[]; // [E,A,C,O,S]
+  tags: string[];
 }
 
 export interface Venue {
@@ -56,232 +72,213 @@ export interface Venue {
   suitability_score: number;
 }
 
+// Helper: create a Member from Big Five scores
+function makeMember(
+  id: string, name: string, role: string,
+  E: number, A: number, C: number, O: number, S: number,
+  communityRole: string, interests: string[],
+  preferred_format: string, preferred_time: string
+): Member {
+  return {
+    id, name, role,
+    extraversion: E, agreeableness: A, conscientiousness: C, openness: O, emotionalStability: S,
+    communityRole, interests, preferred_format, preferred_time,
+    // Legacy compat: map Big Five → old 1-5 scores
+    intro_extro_score: Math.round(E * 4 + 1),
+    creative_technical_score: Math.round(O * 4 + 1),
+    collaboration_score: Math.round(A * 4 + 1),
+  };
+}
+
 export const mockMembers: Member[] = [
-  { id: '1', name: 'Alice', role: 'Designer', intro_extro_score: 2, creative_technical_score: 1, collaboration_score: 2, interests: ['UI/UX', 'Art', 'Typography'], preferred_format: 'Workshop', preferred_time: 'Weekend' },
-  { id: '2', name: 'Bob', role: 'Developer', intro_extro_score: 4, creative_technical_score: 5, collaboration_score: 4, interests: ['React', 'Node.js', 'Startups'], preferred_format: 'Hackathon', preferred_time: 'Evening' },
-  { id: '3', name: 'Charlie', role: 'Data Scientist', intro_extro_score: 2, creative_technical_score: 4, collaboration_score: 2, interests: ['Machine Learning', 'Python', 'Math'], preferred_format: 'Study Group', preferred_time: 'Weekend' },
-  { id: '4', name: 'Diana', role: 'Product Manager', intro_extro_score: 5, creative_technical_score: 3, collaboration_score: 5, interests: ['Strategy', 'Leadership', 'Networking'], preferred_format: 'Mixer', preferred_time: 'Evening' },
-  { id: '5', name: 'Eve', role: 'Illustrator', intro_extro_score: 1, creative_technical_score: 1, collaboration_score: 1, interests: ['Drawing', 'Animation', 'Comics'], preferred_format: 'Workshop', preferred_time: 'Weekend' },
-  { id: '6', name: 'Frank', role: 'DevOps', intro_extro_score: 3, creative_technical_score: 5, collaboration_score: 3, interests: ['Cloud', 'Linux', 'Security'], preferred_format: 'Tech Talk', preferred_time: 'Evening' },
-  { id: '7', name: 'Grace', role: 'Marketing', intro_extro_score: 5, creative_technical_score: 2, collaboration_score: 5, interests: ['Social Media', 'Content', 'Community'], preferred_format: 'Mixer', preferred_time: 'Evening' },
-  { id: '8', name: 'Hank', role: 'Backend Dev', intro_extro_score: 2, creative_technical_score: 5, collaboration_score: 2, interests: ['Databases', 'Go', 'Architecture'], preferred_format: 'Study Group', preferred_time: 'Weekend' },
-  { id: '9', name: 'Ivy', role: 'UX Researcher', intro_extro_score: 3, creative_technical_score: 2, collaboration_score: 4, interests: ['Psychology', 'Interviews', 'Data'], preferred_format: 'Workshop', preferred_time: 'Evening' },
-  { id: '10', name: 'Jack', role: 'Founder', intro_extro_score: 5, creative_technical_score: 3, collaboration_score: 5, interests: ['Startups', 'Pitching', 'Venture Capital'], preferred_format: 'Pitch Night', preferred_time: 'Evening' },
-  // Adding more for realistic charts
-  ...Array.from({ length: 20 }).map((_, i) => ({
-    id: `11_${i}`,
-    name: `Member ${i + 11}`,
-    role: ['Developer', 'Designer', 'Manager', 'Student'][Math.floor(Math.random() * 4)],
-    intro_extro_score: Math.floor(Math.random() * 5) + 1,
-    creative_technical_score: Math.floor(Math.random() * 5) + 1,
-    collaboration_score: Math.floor(Math.random() * 5) + 1,
-    interests: ['Tech', 'Art', 'Business', 'Science'].sort(() => 0.5 - Math.random()).slice(0, 2),
-    preferred_format: ['Workshop', 'Mixer', 'Hackathon', 'Study Group'][Math.floor(Math.random() * 4)],
-    preferred_time: ['Weekend', 'Evening', 'Weekday Morning'][Math.floor(Math.random() * 3)],
-  }))
+  makeMember('1', 'Alice', 'Designer', 0.3, 0.7, 0.5, 0.9, 0.6, 'Innovator', ['Design', 'UX Research', 'Art'], 'Workshop', 'Weekend'),
+  makeMember('2', 'Bob', 'Developer', 0.8, 0.5, 0.7, 0.8, 0.5, 'Community Builder', ['AI', 'Startups', 'Coding'], 'Hackathon', 'Evening'),
+  makeMember('3', 'Charlie', 'Data Scientist', 0.2, 0.6, 0.9, 0.7, 0.7, 'Specialist', ['Data Science', 'AI', 'Cloud/DevOps'], 'Study Group', 'Weekend'),
+  makeMember('4', 'Diana', 'Product Manager', 0.9, 0.8, 0.6, 0.5, 0.4, 'Community Builder', ['Leadership', 'Startups', 'Marketing'], 'Mixer', 'Evening'),
+  makeMember('5', 'Eve', 'Illustrator', 0.2, 0.8, 0.4, 0.8, 0.7, 'Supporter', ['Design', 'Community', 'Open Source'], 'Workshop', 'Weekend'),
+  makeMember('6', 'Frank', 'DevOps', 0.3, 0.5, 0.8, 0.4, 0.7, 'Specialist', ['Cloud/DevOps', 'Coding', 'Open Source'], 'Seminar', 'Evening'),
+  makeMember('7', 'Grace', 'Marketing', 0.9, 0.9, 0.3, 0.5, 0.4, 'Community Builder', ['Marketing', 'Community', 'Startups'], 'Mixer', 'Evening'),
+  makeMember('8', 'Hank', 'Backend Dev', 0.2, 0.4, 0.9, 0.5, 0.7, 'Specialist', ['Coding', 'Cloud/DevOps', 'Data Science'], 'Study Group', 'Weekend'),
+  makeMember('9', 'Ivy', 'UX Researcher', 0.5, 0.8, 0.6, 0.6, 0.8, 'Supporter', ['UX Research', 'Design', 'Data Science'], 'Workshop', 'Evening'),
+  makeMember('10', 'Jack', 'Founder', 0.9, 0.6, 0.5, 0.8, 0.3, 'Innovator', ['Startups', 'AI', 'Leadership'], 'Pitch Night', 'Evening'),
+  // 20 more seed users with varied Big Five profiles
+  makeMember('11', 'Leyla', 'Developer', 0.8, 0.7, 0.4, 0.9, 0.5, 'Community Builder', ['AI', 'Startups', 'Hackathons'], 'Hackathon', 'Evening'),
+  makeMember('12', 'Murad', 'Developer', 0.3, 0.6, 0.9, 0.4, 0.7, 'Organizer', ['Coding', 'Open Source'], 'Study Group', 'Weekend'),
+  makeMember('13', 'Nigar', 'Designer', 0.6, 0.5, 0.7, 0.8, 0.6, 'Innovator', ['UX Research', 'Design', 'Mobile Dev'], 'Workshop', 'Evening'),
+  makeMember('14', 'Samir', 'Founder', 0.9, 0.8, 0.3, 0.6, 0.4, 'Community Builder', ['Startups', 'Leadership', 'Marketing'], 'Mixer', 'Evening'),
+  makeMember('15', 'Kamala', 'Student', 0.2, 0.9, 0.5, 0.3, 0.8, 'Supporter', ['Community', 'Open Source'], 'Workshop', 'Weekend'),
+  makeMember('16', 'Elvin', 'Data Scientist', 0.4, 0.5, 0.8, 0.5, 0.6, 'Organizer', ['Data Science', 'AI', 'Cloud/DevOps'], 'Seminar', 'Evening'),
+  makeMember('17', 'Aytaj', 'Marketing', 0.5, 0.6, 0.6, 0.7, 0.5, 'Innovator', ['AI', 'Startups', 'Blockchain'], 'Hackathon', 'Evening'),
+  makeMember('18', 'Rasul', 'Developer', 0.4, 0.7, 0.9, 0.4, 0.8, 'Organizer', ['Coding', 'Open Source', 'Cloud/DevOps'], 'Study Group', 'Weekend'),
+  makeMember('19', 'Gunel', 'Product Manager', 0.8, 0.4, 0.6, 0.5, 0.5, 'Participant', ['Startups', 'Leadership'], 'Pitch Night', 'Evening'),
+  makeMember('20', 'Farid', 'Student', 0.5, 0.9, 0.5, 0.3, 0.9, 'Supporter', ['Community', 'Open Source'], 'Workshop', 'Weekend'),
+  makeMember('21', 'Nargiz', 'Designer', 0.3, 0.8, 0.7, 0.6, 0.7, 'Supporter', ['Design', 'UX Research'], 'Workshop', 'Weekend'),
+  makeMember('22', 'Tural', 'Developer', 0.7, 0.5, 0.8, 0.9, 0.4, 'Innovator', ['AI', 'Mobile Dev', 'Blockchain'], 'Hackathon', 'Evening'),
+  makeMember('23', 'Sevinj', 'Marketing', 0.8, 0.8, 0.4, 0.4, 0.6, 'Community Builder', ['Marketing', 'Community', 'Leadership'], 'Mixer', 'Evening'),
+  makeMember('24', 'Orkhan', 'Developer', 0.2, 0.3, 0.9, 0.6, 0.8, 'Specialist', ['Coding', 'Data Science', 'AI'], 'Study Group', 'Weekday Morning'),
+  makeMember('25', 'Aysel', 'Student', 0.6, 0.7, 0.5, 0.8, 0.5, 'Innovator', ['AI', 'Design', 'Startups'], 'Workshop', 'Weekend'),
+  makeMember('26', 'Rufat', 'DevOps', 0.4, 0.6, 0.8, 0.3, 0.7, 'Organizer', ['Cloud/DevOps', 'Coding'], 'Seminar', 'Evening'),
+  makeMember('27', 'Lamiya', 'Data Scientist', 0.5, 0.5, 0.7, 0.9, 0.6, 'Innovator', ['Data Science', 'AI', 'Blockchain'], 'Hackathon', 'Weekend'),
+  makeMember('28', 'Emil', 'Founder', 0.9, 0.6, 0.5, 0.7, 0.3, 'Community Builder', ['Startups', 'AI', 'Leadership'], 'Pitch Night', 'Evening'),
+  makeMember('29', 'Ulviyya', 'Designer', 0.3, 0.9, 0.6, 0.5, 0.9, 'Supporter', ['Design', 'Community', 'UX Research'], 'Workshop', 'Weekend'),
+  makeMember('30', 'Javid', 'Developer', 0.6, 0.5, 0.6, 0.8, 0.5, 'Participant', ['Coding', 'AI', 'Mobile Dev'], 'Hackathon', 'Evening'),
 ];
 
 export const mockClusters: Cluster[] = [
   {
-    id: 'c1',
-    name: 'Quiet Creatives',
-    description: 'Introverted, highly creative individuals who prefer focused, small-group interactions.',
-    size: 12,
-    avg_intro_extro: 1.8,
-    avg_creative_technical: 1.5,
-    avg_collaboration: 2.1,
-    dominant_interests: ['Design', 'Art', 'Writing'],
-    recommended_event_type: 'Hands-on Design Workshop',
-    recommended_time: 'Weekend Afternoon',
-    recommended_group_size: 'Small (5-15)',
-    color: '#10b981' // emerald-500
+    id: 'community-builder',
+    name: 'Community Builders',
+    description: 'Natural connectors with high extraversion and agreeableness – they bring people together.',
+    size: 7, avg_intro_extro: 4.5, avg_creative_technical: 3.0, avg_collaboration: 4.5,
+    avg_extraversion: 0.87, avg_agreeableness: 0.73, avg_conscientiousness: 0.45, avg_openness: 0.6, avg_emotionalStability: 0.44,
+    dominant_interests: ['Startups', 'Leadership', 'Networking'],
+    recommended_event_type: 'Networking Mixer', recommended_time: 'Weekday Evening', recommended_group_size: 'Large (30+)',
+    color: '#f59e0b',
   },
   {
-    id: 'c2',
-    name: 'Social Tech Builders',
-    description: 'Extroverted, technical members who thrive in collaborative, high-energy environments.',
-    size: 18,
-    avg_intro_extro: 4.2,
-    avg_creative_technical: 4.5,
-    avg_collaboration: 4.0,
-    dominant_interests: ['Coding', 'Startups', 'Hackathons'],
-    recommended_event_type: 'Pitch & Prototype Night',
-    recommended_time: 'Weekday Evening',
-    recommended_group_size: 'Large (30+)',
-    color: '#3b82f6' // blue-500
+    id: 'organizer',
+    name: 'Organizers',
+    description: 'Reliable planners with high conscientiousness who keep events structured and on track.',
+    size: 5, avg_intro_extro: 2.5, avg_creative_technical: 4.0, avg_collaboration: 3.5,
+    avg_extraversion: 0.36, avg_agreeableness: 0.58, avg_conscientiousness: 0.86, avg_openness: 0.42, avg_emotionalStability: 0.7,
+    dominant_interests: ['Coding', 'Open Source', 'Cloud/DevOps'],
+    recommended_event_type: 'Structured Workshop', recommended_time: 'Weekend Morning', recommended_group_size: 'Medium (15-30)',
+    color: '#3b82f6',
   },
   {
-    id: 'c3',
-    name: 'Independent Learners',
-    description: 'Quiet, technical or skill-focused members who prefer structured, goal-oriented sessions.',
-    size: 8,
-    avg_intro_extro: 2.0,
-    avg_creative_technical: 4.2,
-    avg_collaboration: 1.8,
-    dominant_interests: ['Data Science', 'Backend', 'Math'],
-    recommended_event_type: 'Focused Build Sprint',
-    recommended_time: 'Weekend Morning',
-    recommended_group_size: 'Medium (15-30)',
-    color: '#8b5cf6' // violet-500
+    id: 'innovator',
+    name: 'Innovators',
+    description: 'Idea generators and experimental thinkers with high openness who push boundaries.',
+    size: 7, avg_intro_extro: 3.5, avg_creative_technical: 4.5, avg_collaboration: 3.0,
+    avg_extraversion: 0.54, avg_agreeableness: 0.57, avg_conscientiousness: 0.57, avg_openness: 0.83, avg_emotionalStability: 0.51,
+    dominant_interests: ['AI', 'Hackathons', 'Blockchain'],
+    recommended_event_type: 'AI Hackathon', recommended_time: 'Weekend', recommended_group_size: 'Medium (15-30)',
+    color: '#8b5cf6',
   },
   {
-    id: 'c4',
-    name: 'Community Connectors',
-    description: 'Highly social, collaborative members driven by mission and group engagement.',
-    size: 15,
-    avg_intro_extro: 4.8,
-    avg_creative_technical: 2.5,
-    avg_collaboration: 4.9,
-    dominant_interests: ['Leadership', 'Networking', 'Social Impact'],
-    recommended_event_type: 'Volunteer Collaboration Day',
-    recommended_time: 'Weekend',
-    recommended_group_size: 'Large (30+)',
-    color: '#f59e0b' // amber-500
-  }
+    id: 'supporter',
+    name: 'Supporters',
+    description: 'Great mentors and helpers with high agreeableness and emotional stability.',
+    size: 6, avg_intro_extro: 2.0, avg_creative_technical: 3.0, avg_collaboration: 4.5,
+    avg_extraversion: 0.33, avg_agreeableness: 0.83, avg_conscientiousness: 0.55, avg_openness: 0.52, avg_emotionalStability: 0.8,
+    dominant_interests: ['Community', 'Design', 'Open Source'],
+    recommended_event_type: 'Mentoring Workshop', recommended_time: 'Weekend Afternoon', recommended_group_size: 'Small (5-15)',
+    color: '#10b981',
+  },
+  {
+    id: 'specialist',
+    name: 'Specialists',
+    description: 'Focused contributors who prefer deep work and structured, goal-oriented sessions.',
+    size: 4, avg_intro_extro: 1.5, avg_creative_technical: 4.5, avg_collaboration: 2.0,
+    avg_extraversion: 0.22, avg_agreeableness: 0.45, avg_conscientiousness: 0.88, avg_openness: 0.5, avg_emotionalStability: 0.72,
+    dominant_interests: ['Coding', 'Data Science', 'Cloud/DevOps'],
+    recommended_event_type: 'Focused Build Sprint', recommended_time: 'Weekend Morning', recommended_group_size: 'Small (5-15)',
+    color: '#ef4444',
+  },
 ];
 
 export const mockRecommendations: EventRecommendation[] = [
   {
-    id: 'r1',
-    cluster_id: 'c1',
-    title: 'Hands-on Design Workshop',
-    format: 'Workshop',
-    description: 'A quiet, focused session where members can learn a new design tool or technique with hands-on practice.',
-    ideal_size: '10-15',
-    ideal_duration: '2 hours',
-    why_this_fits: 'Matches their preference for creative tasks and small, low-pressure group settings.',
-    energy_level: 'Low/Focused',
-    venue_type_needed: 'Studio or Classroom',
-    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&q=80&w=800',
-    date: 'March 22, 2026',
-    price: 25,
-    address: '123 Arts Avenue, Studio District, Downtown',
-    host: 'Creative Collective Co.',
-    details: [
-      'Learn Figma design essentials',
-      'Hands-on wireframing exercises',
-      'Prototype creation workshop',
-      'Personal feedback session',
-      'Certificate of completion'
-    ]
-  },
-  {
-    id: 'r2',
-    cluster_id: 'c2',
-    title: 'Pitch & Prototype Night',
-    format: 'Mini-Hackathon',
-    description: 'A high-energy evening where teams form quickly, build a prototype, and pitch it to the group.',
-    ideal_size: '30-50',
-    ideal_duration: '3-4 hours',
-    why_this_fits: 'Perfect for their extroverted, technical nature and desire for collaborative building.',
-    energy_level: 'High/Dynamic',
-    venue_type_needed: 'Co-working Space or Innovation Hub',
+    id: 'r1', cluster_id: 'innovator',
+    title: 'AI Ideation Hackathon',
+    format: 'Hackathon', description: 'A 6-hour hackathon where small teams prototype AI ideas. Demo and pitch at the end.',
+    ideal_size: '30-50', ideal_duration: '6 hours',
+    why_this_fits: 'Perfect for Innovators who crave experimentation and building new things with AI.',
+    energy_level: 'High/Dynamic', venue_type_needed: 'Innovation Hub',
     image: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&q=80&w=800',
-    date: 'March 20, 2026',
-    price: 15,
-    address: '456 Tech Plaza, Innovation Hub, Midtown',
-    host: 'TechStart Community',
-    details: [
-      'Rapid team formation (5-15 mins)',
-      'Focused build session (2 hours)',
-      'Live pitch presentations',
-      'Networking opportunities with investors',
-      'Free food and refreshments'
-    ]
+    date: 'April 20, 2026', price: 15, address: 'Innovation Hub, Baku', host: 'CommunityIQ',
+    details: ['Rapid team formation', 'Focused build session (4 hours)', 'Live pitch presentations', 'Networking with mentors', 'Prizes for top ideas'],
+    personality_profile: [0.4, 0.5, 0.7, 0.9, 0.4], tags: ['hackathon', 'AI', 'prototyping'],
   },
   {
-    id: 'r3',
-    cluster_id: 'c3',
-    title: 'Focused Build Sprint',
-    format: 'Co-working / Study Group',
-    description: 'A dedicated block of time for members to bring their own projects and work alongside others in silence, followed by a brief show-and-tell.',
-    ideal_size: '15-20',
-    ideal_duration: '3 hours',
-    why_this_fits: 'Provides the structure and quiet environment they need to focus on technical skills.',
-    energy_level: 'Low/Intense',
-    venue_type_needed: 'Library Room or Quiet Lab',
-    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800',
-    date: 'March 25, 2026',
-    price: 10,
-    address: '789 Code Lane, Tech Hub, Downtown',
-    host: 'Developer Community Network',
-    details: [
-      'Quiet work environment',
-      'Dedicated project time',
-      'Optional pair programming',
-      'Show-and-tell session',
-      'Snacks and beverages included'
-    ]
-  },
-  {
-    id: 'r4',
-    cluster_id: 'c4',
-    title: 'Community Mixer & Brainstorm',
-    format: 'Networking Mixer',
-    description: 'An open, unstructured event with facilitated icebreakers and group brainstorming for community initiatives.',
-    ideal_size: '40+',
-    ideal_duration: '2 hours',
-    why_this_fits: 'Leverages their high social energy and desire to connect and collaborate on big ideas.',
-    energy_level: 'High/Social',
-    venue_type_needed: 'Event Hall or Café Lounge',
+    id: 'r2', cluster_id: 'community-builder',
+    title: 'Startup Demo Night',
+    format: 'Pitch Night', description: 'Members present startup ideas in 3-minute pitches and get live feedback from investors.',
+    ideal_size: '40-80', ideal_duration: '3 hours',
+    why_this_fits: 'Community Builders thrive in high-energy social events where they connect people.',
+    energy_level: 'High/Social', venue_type_needed: 'Event Hall',
     image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=800',
-    date: 'March 28, 2026',
-    price: 20,
-    address: '321 Community Hall, Event District, Uptown',
-    host: 'Community Connectors Initiative',
-    details: [
-      'Facilitated icebreaker games',
-      'Group brainstorming sessions',
-      'Open discussions on community initiatives',
-      'Networking with diverse members',
-      'Appetizers and drinks provided'
-    ]
-  }
+    date: 'April 28, 2026', price: 20, address: 'Startup Hub, Baku', host: 'TechStart Baku',
+    details: ['3-minute pitches', 'Live investor feedback', 'Networking cocktails', 'Startup showcase', 'Best Pitch Award'],
+    personality_profile: [0.9, 0.8, 0.4, 0.7, 0.6], tags: ['startups', 'pitching', 'networking'],
+  },
+  {
+    id: 'r3', cluster_id: 'specialist',
+    title: 'Focused Build Sprint',
+    format: 'Co-working', description: 'A dedicated block of time for members to bring their own projects and work alongside others, followed by a show-and-tell.',
+    ideal_size: '10-20', ideal_duration: '3 hours',
+    why_this_fits: 'Specialists need structured, quiet environments where they can focus on deep technical work.',
+    energy_level: 'Low/Intense', venue_type_needed: 'Library or Quiet Lab',
+    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800',
+    date: 'May 12, 2026', price: 10, address: 'Co-working Space, Baku', host: 'Dev Community',
+    details: ['Quiet work environment', 'Dedicated project time', 'Optional pair programming', 'Show-and-tell session', 'Coffee & snacks'],
+    personality_profile: [0.3, 0.7, 0.9, 0.3, 0.7], tags: ['coding', 'workshop', 'OSS'],
+  },
+  {
+    id: 'r4', cluster_id: 'supporter',
+    title: 'Mentoring Workshop & Design Jam',
+    format: 'Workshop', description: 'A quiet, collaborative session where experienced members mentor newcomers through a design challenge.',
+    ideal_size: '10-15', ideal_duration: '2 hours',
+    why_this_fits: 'Supporters excel as mentors in small-group, collaborative settings with clear goals.',
+    energy_level: 'Low/Focused', venue_type_needed: 'Studio or Classroom',
+    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&q=80&w=800',
+    date: 'May 2, 2026', price: 0, address: 'Design Lab, Baku', host: 'Creative Collective',
+    details: ['Mentor-mentee pairing', 'Design challenge', 'Personal feedback', 'Portfolio review', 'Certificate of completion'],
+    personality_profile: [0.3, 0.8, 0.6, 0.5, 0.7], tags: ['workshop', 'design', 'mentoring'],
+  },
+  {
+    id: 'r5', cluster_id: 'organizer',
+    title: 'Open Source Sprint',
+    format: 'Sprint', description: 'Bring your own OSS project and code alongside mentors. Pair programming welcome.',
+    ideal_size: '15-25', ideal_duration: '5 hours',
+    why_this_fits: 'Organizers love structured sessions with clear deliverables. An OSS sprint lets them lead sub-teams.',
+    energy_level: 'Medium/Structured', venue_type_needed: 'Co-working Space',
+    image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=800',
+    date: 'May 12, 2026', price: 5, address: 'Tech Hub, Baku', host: 'Open Source Azerbaijan',
+    details: ['Project onboarding', 'Pair programming sessions', 'Code review workshops', 'PR celebration', 'Pizza & drinks'],
+    personality_profile: [0.3, 0.7, 0.9, 0.5, 0.7], tags: ['coding', 'OSS', 'mentorship'],
+  },
+  {
+    id: 'r6', cluster_id: 'community-builder',
+    title: 'Community Mixer & Brainstorm',
+    format: 'Mixer', description: 'An open, unstructured event with facilitated icebreakers and group brainstorming for community initiatives.',
+    ideal_size: '40+', ideal_duration: '2 hours',
+    why_this_fits: 'Leverages their high social energy and desire to connect and collaborate on big ideas.',
+    energy_level: 'High/Social', venue_type_needed: 'Event Hall or Café Lounge',
+    image: 'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?auto=format&fit=crop&q=80&w=800',
+    date: 'May 28, 2026', price: 15, address: 'Event Hall, Baku', host: 'CommunityIQ',
+    details: ['Facilitated icebreakers', 'Group brainstorming', 'Open discussions', 'Networking', 'Appetizers & drinks'],
+    personality_profile: [0.8, 0.9, 0.3, 0.5, 0.5], tags: ['networking', 'brainstorm', 'community'],
+  },
 ];
 
 export const mockVenues: Venue[] = [
   {
-    id: 'v1',
-    name: 'The Greenhouse Co-working',
-    type: 'Co-working Space',
-    capacity: 60,
-    location: 'Downtown',
-    indoor_outdoor: 'Indoor',
-    suitability_tags: ['Hackathon', 'Mixer', 'Tech'],
+    id: 'v1', name: 'The Greenhouse Co-working', type: 'Co-working Space', capacity: 60,
+    location: 'Downtown Baku', indoor_outdoor: 'Indoor',
+    suitability_tags: ['Hackathon', 'Sprint', 'Tech'],
     image: 'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?auto=format&fit=crop&q=80&w=800',
-    suitability_score: 95
+    suitability_score: 95,
   },
   {
-    id: 'v2',
-    name: 'Central Library Annex',
-    type: 'Library Room',
-    capacity: 20,
-    location: 'Midtown',
-    indoor_outdoor: 'Indoor',
+    id: 'v2', name: 'Central Library Annex', type: 'Library Room', capacity: 20,
+    location: 'Midtown Baku', indoor_outdoor: 'Indoor',
     suitability_tags: ['Workshop', 'Study Group', 'Quiet'],
     image: 'https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&q=80&w=800',
-    suitability_score: 88
+    suitability_score: 88,
   },
   {
-    id: 'v3',
-    name: 'Artisan Studio Loft',
-    type: 'Studio',
-    capacity: 15,
-    location: 'Arts District',
-    indoor_outdoor: 'Indoor',
+    id: 'v3', name: 'Artisan Studio Loft', type: 'Studio', capacity: 15,
+    location: 'Arts District, Baku', indoor_outdoor: 'Indoor',
     suitability_tags: ['Design', 'Creative', 'Workshop'],
     image: 'https://images.unsplash.com/photo-1600607686527-6fb886090705?auto=format&fit=crop&q=80&w=800',
-    suitability_score: 92
+    suitability_score: 92,
   },
   {
-    id: 'v4',
-    name: 'Riverside Park Pavilion',
-    type: 'Park Pavilion',
-    capacity: 100,
-    location: 'Westside',
-    indoor_outdoor: 'Outdoor',
-    suitability_tags: ['Social', 'Mixer', 'Large Group'],
+    id: 'v4', name: 'Caspian Event Hall', type: 'Event Hall', capacity: 150,
+    location: 'Caspian Plaza, Baku', indoor_outdoor: 'Indoor',
+    suitability_tags: ['Mixer', 'Pitch Night', 'Large Group'],
     image: 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&q=80&w=800',
-    suitability_score: 85
-  }
+    suitability_score: 90,
+  },
 ];

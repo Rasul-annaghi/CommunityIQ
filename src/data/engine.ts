@@ -9,38 +9,41 @@ import {
   mockVenues,
 } from './mockData';
 
-type QuizMemberInput = {
+const dynamicMembers: Member[] = [];
+
+export function addMemberFromQuiz(input: {
   name: string;
   role: string;
-  introExtroScore: number;
-  creativeTechnicalScore: number;
-  collaborationScore: number;
+  extraversion: number;
+  agreeableness: number;
+  conscientiousness: number;
+  openness: number;
+  emotionalStability: number;
+  communityRole: string;
   interests: string[];
   preferredFormat: string;
   preferredTime: string;
-};
-
-type ClusterId = Cluster['id'];
-
-const dynamicMembers: Member[] = [];
-
-export function addMemberFromQuiz(input: QuizMemberInput): { member: Member; clusterId: ClusterId } {
+}): { member: Member; clusterId: string } {
   const member: Member = {
     id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     name: input.name.trim(),
     role: input.role || 'Member',
-    intro_extro_score: clampScore(input.introExtroScore),
-    creative_technical_score: clampScore(input.creativeTechnicalScore),
-    collaboration_score: clampScore(input.collaborationScore),
+    extraversion: input.extraversion,
+    agreeableness: input.agreeableness,
+    conscientiousness: input.conscientiousness,
+    openness: input.openness,
+    emotionalStability: input.emotionalStability,
+    communityRole: input.communityRole,
     interests: input.interests,
     preferred_format: input.preferredFormat,
     preferred_time: input.preferredTime,
+    intro_extro_score: Math.round(input.extraversion * 4 + 1),
+    creative_technical_score: Math.round(input.openness * 4 + 1),
+    collaboration_score: Math.round(input.agreeableness * 4 + 1),
   };
 
   dynamicMembers.push(member);
-
   const clusterId = inferClusterId(member);
-
   return { member, clusterId };
 }
 
@@ -50,16 +53,15 @@ export function getAllMembers(): Member[] {
 
 export function getClusterSummaries(): Cluster[] {
   const allMembers = getAllMembers();
+  const clusterIds = mockClusters.map((c) => c.id);
 
-  const buckets: Record<ClusterId, Member[]> = Object.fromEntries(
-    mockClusters.map((c) => [c.id, [] as Member[]]),
-  ) as Record<ClusterId, Member[]>;
+  const buckets: Record<string, Member[]> = Object.fromEntries(
+    clusterIds.map((id) => [id, [] as Member[]]),
+  );
 
   for (const member of allMembers) {
     const id = inferClusterId(member);
-    if (!buckets[id]) {
-      buckets[id] = [];
-    }
+    if (!buckets[id]) buckets[id] = [];
     buckets[id].push(member);
   }
 
@@ -67,23 +69,13 @@ export function getClusterSummaries(): Cluster[] {
     const members = buckets[template.id] ?? [];
     const count = members.length;
 
-    if (!count) {
-      return template;
-    }
+    if (!count) return template;
 
-    const totals = members.reduce(
-      (acc, m) => {
-        acc.intro += m.intro_extro_score;
-        acc.creativeTech += m.creative_technical_score;
-        acc.collab += m.collaboration_score;
-        return acc;
-      },
-      { intro: 0, creativeTech: 0, collab: 0 },
-    );
-
-    const avg_intro_extro = round1(totals.intro / count);
-    const avg_creative_technical = round1(totals.creativeTech / count);
-    const avg_collaboration = round1(totals.collab / count);
+    const avgE = avg(members.map((m) => m.extraversion));
+    const avgA = avg(members.map((m) => m.agreeableness));
+    const avgC = avg(members.map((m) => m.conscientiousness));
+    const avgO = avg(members.map((m) => m.openness));
+    const avgS = avg(members.map((m) => m.emotionalStability));
 
     const interestCounts = new Map<string, number>();
     for (const m of members) {
@@ -103,33 +95,79 @@ export function getClusterSummaries(): Cluster[] {
     return {
       ...template,
       size: count,
-      avg_intro_extro,
-      avg_creative_technical,
-      avg_collaboration,
+      avg_extraversion: round2(avgE),
+      avg_agreeableness: round2(avgA),
+      avg_conscientiousness: round2(avgC),
+      avg_openness: round2(avgO),
+      avg_emotionalStability: round2(avgS),
+      avg_intro_extro: round2(avgE * 4 + 1),
+      avg_creative_technical: round2(avgO * 4 + 1),
+      avg_collaboration: round2(avgA * 4 + 1),
       dominant_interests,
     };
   });
 }
 
-export function getClusterById(id: ClusterId): Cluster | undefined {
+export function getClusterById(id: string): Cluster | undefined {
   return getClusterSummaries().find((c) => c.id === id);
 }
 
-export function getRecommendations(): EventRecommendation[] {
-  const clusters = getClusterSummaries();
-  const clusterById = new Map<ClusterId, Cluster>();
-  for (const c of clusters) {
-    clusterById.set(c.id, c);
-  }
-
-  return [...mockRecommendations].sort((a, b) => {
-    const aSize = clusterById.get(a.cluster_id)?.size ?? 0;
-    const bSize = clusterById.get(b.cluster_id)?.size ?? 0;
-    return bSize - aSize;
-  });
+/**
+ * Hybrid event scoring: α * content_score + (1-α) * personality_bonus
+ */
+export function hybridScore(
+  userTraits: number[],
+  userInterests: string[],
+  eventProfile: number[],
+  eventTags: string[],
+  alpha = 0.6
+): number {
+  const content = jaccardSimilarity(userInterests, eventTags);
+  const personality = dotProduct(userTraits, eventProfile) / 5;
+  return alpha * content + (1 - alpha) * personality;
 }
 
-export function getRecommendationForCluster(clusterId: ClusterId): EventRecommendation | undefined {
+function jaccardSimilarity(a: string[], b: string[]): number {
+  if (!a.length && !b.length) return 0;
+  const setA = new Set(a.map((s) => s.toLowerCase()));
+  const setB = new Set(b.map((s) => s.toLowerCase()));
+  let intersection = 0;
+  for (const item of setA) {
+    if (setB.has(item)) intersection++;
+  }
+  const union = new Set([...setA, ...setB]).size;
+  return union > 0 ? intersection / union : 0;
+}
+
+function dotProduct(a: number[], b: number[]): number {
+  let sum = 0;
+  const len = Math.min(a.length, b.length);
+  for (let i = 0; i < len; i++) sum += a[i] * b[i];
+  return sum;
+}
+
+export function getRecommendations(): EventRecommendation[] {
+  return [...mockRecommendations];
+}
+
+export function getRecommendationsForUser(
+  userTraits: number[],
+  userInterests: string[]
+): EventRecommendation[] {
+  const scored = mockRecommendations.map((rec) => ({
+    rec,
+    score: hybridScore(
+      userTraits,
+      userInterests,
+      rec.personality_profile,
+      rec.tags,
+    ),
+  }));
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map((s) => s.rec);
+}
+
+export function getRecommendationForCluster(clusterId: string): EventRecommendation | undefined {
   return mockRecommendations.find((rec) => rec.cluster_id === clusterId);
 }
 
@@ -137,58 +175,74 @@ export function getTopVenues(): Venue[] {
   return mockVenues;
 }
 
-export function inferClusterId(member: Member): ClusterId {
-  const intro = clampScore(member.intro_extro_score);
-  const creativeTech = clampScore(member.creative_technical_score);
-  const collab = clampScore(member.collaboration_score);
+export function inferClusterId(member: Member): string {
+  const { extraversion: E, agreeableness: A, conscientiousness: C, openness: O, emotionalStability: S } = member;
 
-  if (intro <= 2 && creativeTech <= 3 && collab <= 3) {
-    return 'c1';
-  }
+  if (E > 0.7 && A > 0.7) return 'community-builder';
+  if (C > 0.7) return 'organizer';
+  if (O > 0.7) return 'innovator';
+  if (A > 0.7 && S > 0.7) return 'supporter';
+  if (E < 0.4 && C > 0.6) return 'specialist';
+  return 'innovator'; // default
+}
 
-  if (intro >= 4 && creativeTech >= 4 && collab >= 3) {
-    return 'c2';
-  }
+/**
+ * Compute community-level Big Five averages from all members.
+ */
+export function getCommunityAverages(): {
+  extraversion: number;
+  agreeableness: number;
+  conscientiousness: number;
+  openness: number;
+  emotionalStability: number;
+  topInterests: { name: string; count: number }[];
+  roleDistribution: { role: string; count: number; percent: number }[];
+  totalMembers: number;
+} {
+  const members = getAllMembers();
+  const n = members.length || 1;
 
-  if (intro <= 3 && creativeTech >= 4 && collab <= 3) {
-    return 'c3';
-  }
+  const avgE = avg(members.map((m) => m.extraversion));
+  const avgA = avg(members.map((m) => m.agreeableness));
+  const avgC = avg(members.map((m) => m.conscientiousness));
+  const avgO = avg(members.map((m) => m.openness));
+  const avgS = avg(members.map((m) => m.emotionalStability));
 
-  if (intro >= 4 && collab >= 4) {
-    return 'c4';
-  }
-
-  const archetypeCenters: Record<ClusterId, [number, number, number]> = {
-    c1: [1.5, 2, 2],
-    c2: [4.5, 4.5, 4],
-    c3: [2, 4.5, 2],
-    c4: [4.5, 2.5, 4.5],
-  };
-
-  let bestId: ClusterId = 'c1';
-  let bestDistance = Number.POSITIVE_INFINITY;
-
-  (Object.keys(archetypeCenters) as ClusterId[]).forEach((id) => {
-    const [i, ct, co] = archetypeCenters[id];
-    const d =
-      (intro - i) * (intro - i) +
-      (creativeTech - ct) * (creativeTech - ct) +
-      (collab - co) * (collab - co);
-    if (d < bestDistance) {
-      bestDistance = d;
-      bestId = id;
+  const interestCounts = new Map<string, number>();
+  const roleCounts = new Map<string, number>();
+  for (const m of members) {
+    for (const i of m.interests) {
+      interestCounts.set(i, (interestCounts.get(i) ?? 0) + 1);
     }
-  });
+    roleCounts.set(m.communityRole, (roleCounts.get(m.communityRole) ?? 0) + 1);
+  }
 
-  return bestId;
+  const topInterests = Array.from(interestCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([name, count]) => ({ name, count }));
+
+  const roleDistribution = Array.from(roleCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([role, count]) => ({ role, count, percent: Math.round((count / members.length) * 100) }));
+
+  return {
+    extraversion: round2(avgE),
+    agreeableness: round2(avgA),
+    conscientiousness: round2(avgC),
+    openness: round2(avgO),
+    emotionalStability: round2(avgS),
+    topInterests,
+    roleDistribution,
+    totalMembers: members.length,
+  };
 }
 
-function clampScore(value: number): number {
-  if (Number.isNaN(value)) return 3;
-  return Math.min(5, Math.max(1, Math.round(value)));
+function avg(arr: number[]): number {
+  if (!arr.length) return 0;
+  return arr.reduce((a, b) => a + b, 0) / arr.length;
 }
 
-function round1(value: number): number {
-  return Math.round(value * 10) / 10;
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
 }
-

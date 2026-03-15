@@ -20,6 +20,7 @@ import { History } from './pages/History';
 import { Profile } from './pages/Profile';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
+import { PlannerDashboard } from './pages/PlannerDashboard';
 
 function AppLayout() {
   return (
@@ -46,6 +47,7 @@ function AppRoutes() {
           <Route path="/insights" element={<Insights />} />
           <Route path="/history" element={<History />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/planner" element={<PlannerDashboard />} />
           <Route path="*" element={<div className="flex-1 p-8">Page not found</div>} />
         </Route>
       </Route>
