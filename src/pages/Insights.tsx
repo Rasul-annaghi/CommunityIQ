@@ -1,11 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { getClusterSummaries } from '../data/engine';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from 'recharts';
 
 export function Insights() {
+  const navigate = useNavigate();
   const clusters = getClusterSummaries();
+  const chartData = clusters.map(c => ({ name: c.name, size: c.size, color: c.color }));
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50/50">
@@ -14,6 +17,33 @@ export function Insights() {
       <main className="p-8 space-y-8 max-w-7xl mx-auto w-full">
         <div className="flex items-center justify-between">
           <p className="text-gray-500">Deep dive into the traits and preferences of your community segments.</p>
+        </div>
+
+        {/* Distribution Chart */}
+        <div className="space-y-6">
+          <h2 className="text-xl font-semibold text-gray-900 tracking-tight">Distribution</h2>
+          <Card className="h-[340px] flex flex-col">
+            <CardContent className="p-6 flex-1 flex flex-col">
+              <div className="flex-1 min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                    <Tooltip 
+                      cursor={{ fill: '#f9fafb' }}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Bar dataKey="size" radius={[6, 6, 0, 0]} maxBarSize={40}>
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -25,7 +55,7 @@ export function Insights() {
             ];
 
             return (
-              <Card key={cluster.id} className="overflow-hidden shadow-sm border border-gray-100">
+              <Card key={cluster.id} className="overflow-hidden shadow-sm border border-gray-100 cursor-pointer hover:border-emerald-200 hover:shadow-md transition-all" onClick={() => navigate(`/recommendations?cluster=${cluster.id}`)}>
                 <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-6 px-8 flex flex-row items-center justify-between">
                   <div>
                     <div className="flex items-center gap-3 mb-2">

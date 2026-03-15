@@ -1,10 +1,13 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Card, CardContent } from '../components/Card';
 import { mockVenues } from '../data/mockData';
-import { MapPin, Users, CheckCircle2 } from 'lucide-react';
+import { MapPin, Users } from 'lucide-react';
 
 export function Venues() {
+  const navigate = useNavigate();
+  
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50/50">
       <Header title="Venue Explorer" />
@@ -23,41 +26,42 @@ export function Venues() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="space-y-8">
           {mockVenues.map(venue => (
-            <Card key={venue.id} className="group overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all">
-              <div className="relative h-48 overflow-hidden">
+            <Card 
+              key={venue.id} 
+              className="overflow-hidden flex flex-col md:flex-row shadow-sm border border-gray-100 hover:border-emerald-200 transition-all cursor-pointer hover:shadow-md"
+              onClick={() => navigate(`/venue/${venue.id}`)}
+            >
+              <div className="md:w-1/3 relative h-64 md:h-auto">
                 <img 
                   src={venue.image} 
                   alt={venue.name} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  className="absolute inset-0 w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                 />
-                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg text-sm font-bold text-emerald-600 shadow-sm flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4" />
-                  {venue.suitability_score}% Match
-                </div>
-                <div className="absolute bottom-4 left-4">
-                  <span className="px-3 py-1 rounded-full bg-gray-900/80 backdrop-blur text-white text-xs font-medium border border-white/10">
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent" />
+                <div className="absolute bottom-4 left-4 right-4">
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/90 backdrop-blur text-white text-xs font-bold uppercase tracking-wider shadow-sm">
                     {venue.type}
                   </span>
                 </div>
               </div>
               
-              <CardContent className="p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-2 tracking-tight">{venue.name}</h3>
+              <CardContent className="p-8 md:w-2/3 flex flex-col justify-center">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 tracking-tight">{venue.name}</h2>
                 
-                <div className="flex items-center gap-4 text-sm text-gray-500 mb-6">
-                  <span className="flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4" /> {venue.location}
+                <div className="flex items-center gap-4 text-sm text-gray-600 mb-6">
+                  <span className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-gray-400" /> {venue.location}
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    <Users className="w-4 h-4" /> Up to {venue.capacity}
+                  <span className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-gray-400" /> Up to {venue.capacity}
                   </span>
                 </div>
                 
-                <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-gray-900 uppercase tracking-wider">Best For</h4>
+                <div className="mb-6">
+                  <h4 className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">Best For</h4>
                   <div className="flex flex-wrap gap-2">
                     {venue.suitability_tags.map(tag => (
                       <span key={tag} className="text-xs font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">
@@ -67,11 +71,10 @@ export function Venues() {
                   </div>
                 </div>
                 
-                <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-500">{venue.indoor_outdoor}</span>
-                  <button className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors">
-                    View Details
-                  </button>
+                <div className="flex items-center justify-between text-sm text-gray-600 pt-6 border-t border-gray-100">
+                  <span>
+                    <span className="font-medium text-gray-900">{venue.suitability_score}%</span> Match • {venue.indoor_outdoor}
+                  </span>
                 </div>
               </CardContent>
             </Card>

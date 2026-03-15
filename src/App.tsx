@@ -13,6 +13,7 @@ import { Quiz } from './pages/Quiz';
 import { Recommendations } from './pages/Recommendations';
 import { EventDetails } from './pages/EventDetails';
 import { Venues } from './pages/Venues';
+import { VenueDetails } from './pages/VenueDetails';
 import { Insights } from './pages/Insights';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
@@ -38,6 +39,7 @@ function AppRoutes() {
           <Route path="/recommendations" element={<Recommendations />} />
           <Route path="/event/:eventId" element={<EventDetails />} />
           <Route path="/venues" element={<Venues />} />
+          <Route path="/venue/:venueId" element={<VenueDetails />} />
           <Route path="/insights" element={<Insights />} />
           <Route path="*" element={<div className="flex-1 p-8">Page not found</div>} />
         </Route>
