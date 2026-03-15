@@ -4,26 +4,41 @@ import { Header } from '../components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { getLatestQuizSubmission } from '../lib/quizDb';
-import { ArrowLeft, Mail, CheckCircle2, Lock, Star } from 'lucide-react';
+import { ArrowLeft, Mail, CheckCircle2, Lock, Star, User as UserIcon } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export function Profile() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [quizData, setQuizData] = useState<any | null>(null);
+  const [profileData, setProfileData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPlan, setCurrentPlan] = useState('Starter');
 
   useEffect(() => {
     if (!user) return;
     
-    const fetchQuizData = async () => {
-      const { data } = await getLatestQuizSubmission(user.id);
-      setQuizData(data);
+    const fetchData = async () => {
+      // Fetch quiz data
+      const { data: qData } = await getLatestQuizSubmission(user.id);
+      setQuizData(qData);
+
+      // Fetch profile data
+      const { data: pData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      setProfileData(pData);
       setLoading(false);
     };
 
-    fetchQuizData();
+    fetchData();
   }, [user]);
+
+  const displayName = profileData?.full_name || quizData?.answers?.name || user?.email?.split('@')[0] || 'User';
+  const initial = displayName.charAt(0).toUpperCase();
 
   if (loading) {
     return (
@@ -99,11 +114,11 @@ export function Profile() {
           <CardContent className="p-8">
             <div className="flex items-start gap-6">
               <div className="w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center text-white text-3xl font-bold">
-                K
+                {initial}
               </div>
               <div className="flex-1">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  Kamran
+                  {displayName}
                 </h1>
                 <div className="flex items-center gap-2 text-gray-600 mb-4">
                   <Mail className="w-5 h-5" />

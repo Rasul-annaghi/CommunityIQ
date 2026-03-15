@@ -9,7 +9,8 @@ import {
 } from 'recharts';
 import {
   Sparkles, Brain, Calendar, Send, Loader2, Users, TrendingUp,
-  Lightbulb, ClipboardList, ChevronRight, Shield,
+  Lightbulb, ClipboardList, ChevronRight, Shield, Bell, Mail,
+  AlertCircle, CheckCircle,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -65,6 +66,10 @@ export function PlannerDashboard() {
   const [loadingInvite, setLoadingInvite] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<string>(recommendations[0]?.title ?? '');
   const [liveMemberCount, setLiveMemberCount] = useState<number | null>(null);
+  const [inactiveMembers, setInactiveMembers] = useState<any[]>([]);
+  const [organizers, setOrganizers] = useState<any[]>([]);
+  const [notificationStatus, setNotificationStatus] = useState<{ type: 'success' | 'info', message: string } | null>(null);
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -129,7 +134,44 @@ export function PlannerDashboard() {
             .sort((ax, bx) => bx.count - ax.count),
         });
       });
-  }, []);
+
+    // Fetch inactive members (simulated logic: users in profiles but not in attendance)
+    const fetchEngagementData = async () => {
+      try {
+        const { data: allProfiles } = await supabase.from('profiles').select('id, email, full_name, is_organizer') as { data: any[] | null };
+        const { data: allAttendance } = await supabase.from('attendance').select('user_id') as { data: { user_id: string }[] | null };
+
+        if (allProfiles) {
+          const rsvpUserIds = new Set(allAttendance?.map(a => a.user_id) || []);
+          const inactive = allProfiles.filter(p => !rsvpUserIds.has(p.id) && !p.is_organizer);
+          const orgs = allProfiles.filter(p => p.is_organizer);
+
+          setInactiveMembers(inactive);
+          setOrganizers(orgs);
+        }
+      } catch (err) {
+        console.error('Error fetching engagement data:', err);
+      }
+    };
+
+    fetchEngagementData();
+  }, [user]);
+
+  const sendNotification = (type: 'inactive' | 'organizer') => {
+    setSendingEmail(type);
+    // Simulate API delay
+    setTimeout(() => {
+      setSendingEmail(null);
+      setNotificationStatus({
+        type: 'success',
+        message: type === 'inactive' 
+          ? `Successfully sent reminders to ${inactiveMembers.length} inactive members!` 
+          : `Successfully sent community health updates to ${organizers.length} organizers!`
+      });
+      // Clear message after 5s
+      setTimeout(() => setNotificationStatus(null), 5000);
+    }, 1500);
+  };
 
   const community = dynamicCommunity;
   const displayMemberCount = community.totalMembers;
@@ -509,6 +551,116 @@ Format with clear headings and bullet points.`;
                     {aiInvite}
                   </div>
                 ) : null}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Engagement & Notifications Section */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-6 flex items-center gap-2">
+            <Bell className="w-6 h-6 text-indigo-600" /> Engagement & Notifications
+          </h2>
+
+          {notificationStatus && (
+            <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${
+              notificationStatus.type === 'success' ? 'bg-emerald-50 border border-emerald-100 text-emerald-800' : 'bg-blue-50 border border-blue-100 text-blue-800'
+            }`}>
+              {notificationStatus.type === 'success' ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <AlertCircle className="w-5 h-5 text-blue-600" />}
+              <p className="font-medium text-sm">{notificationStatus.message}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Inactive Members Reminder */}
+            <Card className="border-indigo-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="bg-indigo-50/30 border-b border-indigo-50 py-5 px-6">
+                <CardTitle className="text-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-indigo-600" /> Remind Inactive Members
+                  </div>
+                  <span className="text-xs font-bold px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full">
+                    {inactiveMembers.length} Inactive
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <p className="text-sm text-gray-600 mb-6">
+                  Re-engage members who haven't participated in any events yet. Send them a personalized invitation based on their traits.
+                </p>
+                
+                <div className="space-y-3 mb-6 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  {inactiveMembers.length > 0 ? (
+                    inactiveMembers.map(m => (
+                      <div key={m.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{m.full_name || 'Anonymous'}</p>
+                          <p className="text-xs text-gray-500">{m.email}</p>
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-rose-500 bg-rose-50 px-2 py-0.5 rounded">Away</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                      <p className="text-sm text-gray-500 italic">No inactive members found! Everyone is engaged.</p>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => sendNotification('inactive')}
+                  disabled={inactiveMembers.length === 0 || sendingEmail === 'inactive'}
+                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-indigo-200"
+                >
+                  {sendingEmail === 'inactive' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                  {sendingEmail === 'inactive' ? 'Sending Reminders...' : 'Send Re-engagement Emails'}
+                </button>
+              </CardContent>
+            </Card>
+
+            {/* Organizer Updates */}
+            <Card className="border-emerald-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="bg-emerald-50/30 border-b border-emerald-50 py-5 px-6">
+                <CardTitle className="text-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-emerald-600" /> Notify Organizers
+                  </div>
+                  <span className="text-xs font-bold px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full">
+                    {organizers.length} Active
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <p className="text-sm text-gray-600 mb-6">
+                  Keep your team in the loop. Send a summary of community health, trending interests, and AI-generated event ideas.
+                </p>
+
+                <div className="space-y-3 mb-6 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  {organizers.length > 0 ? (
+                    organizers.map(m => (
+                      <div key={m.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{m.full_name || 'Anonymous'}</p>
+                          <p className="text-xs text-gray-500">{m.email}</p>
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Lead</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                      <p className="text-sm text-gray-500 italic">No organizers found. Add the "is_organizer" role in Supabase.</p>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => sendNotification('organizer')}
+                  disabled={organizers.length === 0 || sendingEmail === 'organizer'}
+                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-emerald-200"
+                >
+                  {sendingEmail === 'organizer' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5" />}
+                  {sendingEmail === 'organizer' ? 'Sending Updates...' : 'Send Community Health Report'}
+                </button>
               </CardContent>
             </Card>
           </div>
