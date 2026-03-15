@@ -15,6 +15,8 @@ import { EventDetails } from './pages/EventDetails';
 import { Venues } from './pages/Venues';
 import { VenueDetails } from './pages/VenueDetails';
 import { Insights } from './pages/Insights';
+import { History } from './pages/History';
+import { Profile } from './pages/Profile';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 
@@ -41,6 +43,8 @@ function AppRoutes() {
           <Route path="/venues" element={<Venues />} />
           <Route path="/venue/:venueId" element={<VenueDetails />} />
           <Route path="/insights" element={<Insights />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<div className="flex-1 p-8">Page not found</div>} />
         </Route>
       </Route>

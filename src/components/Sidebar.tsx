@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Sparkles, MapPin, Settings, Calendar, ClipboardList, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Sparkles, MapPin, Calendar, ClipboardList, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export function Sidebar() {
@@ -13,7 +13,6 @@ export function Sidebar() {
     { name: 'Venues', icon: MapPin, path: '/venues' },
     { name: 'Community Insights', icon: Users, path: '/insights' },
     { name: 'History', icon: Calendar, path: '/history' },
-    { name: 'Settings', icon: Settings, path: '/settings' },
   ];
 
   const handleSignOut = async () => {
@@ -50,15 +49,18 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-gray-100 space-y-1">
-        <div className="flex items-center gap-3 px-3 py-2">
+        <button
+          onClick={() => navigate('/profile')}
+          className="flex items-center gap-3 px-3 py-2 w-full rounded-xl hover:bg-gray-50 transition-colors cursor-pointer group"
+        >
           <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-sm font-medium text-emerald-700">
             {user?.email?.charAt(0).toUpperCase() ?? '?'}
           </div>
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-sm font-medium text-gray-900 truncate">{user?.email ?? 'Member'}</span>
+          <div className="flex flex-col min-w-0 flex-1 text-left">
+            <span className="text-sm font-medium text-gray-900 truncate group-hover:text-emerald-600">{user?.email ?? 'Member'}</span>
             <span className="text-xs text-gray-500">CommunityIQ</span>
           </div>
-        </div>
+        </button>
         <button
           type="button"
           onClick={handleSignOut}
